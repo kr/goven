@@ -28,7 +28,7 @@ func main() {
 	}
 
 	imp = os.Args[1]
-	err = clone(imp, "git://"+imp+".git")
+	err = run("git", "clone", "git://"+imp+".git", imp)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -39,6 +39,11 @@ func main() {
 	}
 
 	err = filepath.Walk(".", rewrite)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = run("go", "fmt")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -63,8 +68,8 @@ func lookupDir() (string, error) {
 	return "", errors.New("cwd not found in GOPATH")
 }
 
-func clone(to, from string) error {
-	cmd := exec.Command("git", "clone", from, to)
+func run(name string, args ...string) error {
+	cmd := exec.Command(name, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

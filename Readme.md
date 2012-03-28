@@ -29,9 +29,11 @@ $ go install github.com/kr/goven
 
 - only works with git
 - always clones the default branch (usually master)
+- does not handle GOPATH with more than one entry
 - needs better error checking and argument handling
 - reformats go source code according to package go/printer
 - does not attempt to handle updating an already-vendored package
+- probably doesn't work on Windows
 
 If you use this tool, I suggest doing it on a clean checkout.
 Then inspect the output carefully. Caveat lector.

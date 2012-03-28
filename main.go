@@ -21,13 +21,18 @@ func main() {
 	if len(os.Args) < 2 {
 		log.Fatalf("Usage: %s package", os.Args[0])
 	}
+	imp = os.Args[1]
 
 	godir, err = lookupDir()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	imp = os.Args[1]
+	err = os.RemoveAll(imp)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	err = run("git", "clone", "git://"+imp+".git", imp)
 	if err != nil {
 		log.Fatal(err)

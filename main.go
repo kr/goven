@@ -2,9 +2,9 @@ package main
 
 import (
 	"errors"
-	"go/token"
 	"go/parser"
 	"go/printer"
+	"go/token"
 	"log"
 	"os"
 	"os/exec"
@@ -95,7 +95,7 @@ func rewriteFile(path string) error {
 	for _, s := range f.Imports {
 		path, err := strconv.Unquote(s.Path.Value)
 		if err != nil {
-			return err	// can't happen
+			return err // can't happen
 		}
 		if strings.HasPrefix(path, imp) {
 			s.Path.Value = strconv.Quote(godir + "/" + path)

@@ -14,8 +14,9 @@ This takes the named package, clones its code into
 a subdirectory, removes the VCS metadata, and
 rewrites import paths in the current directory tree
 to refer to the new location. For example, vendoring
-github.com/kr/pretty into example.com/foo would
-produce an import path of example.com/foo/github.com/kr/pretty.
+`github.com/kr/pretty` into `example.com/foo` would
+produce an import path of
+`example.com/foo/github.com/kr/pretty`.
 
 ## Install
 

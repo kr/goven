@@ -7,16 +7,16 @@ import paths as necessary.
 Example usage:
 
 ```bash
-$ goven github.com/kr/pretty
+$ goven github.com/bmizerany/pat
 ```
 
 This takes the named package, clones its code into
 a subdirectory, removes the VCS metadata, and
 rewrites import paths in the current directory tree
 to refer to the new location. For example, vendoring
-`github.com/kr/pretty` into `example.com/foo` would
+`github.com/bmizerany/pat` into `example.com/foo` would
 produce an import path of
-`example.com/foo/github.com/kr/pretty`.
+`example.com/foo/github.com/bmizerany/pat`.
 
 ## Install
 

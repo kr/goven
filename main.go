@@ -18,13 +18,17 @@ var godir, imp string
 func main() {
 	var err error
 
+	if len(os.Args) < 2 {
+		log.Fatalf("Usage: %s package", os.Args[0])
+	}
+
 	godir, err = lookupDir()
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Print("godir is ", godir)
 
-	imp = "github.com/kr/pretty"
+	imp = os.Args[1]
 	err = clone(imp, "git://"+imp+".git")
 	if err != nil {
 		log.Fatal(err)

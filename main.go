@@ -26,7 +26,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Print("godir is ", godir)
 
 	imp = os.Args[1]
 	err = clone(imp, "git://"+imp+".git")
@@ -57,8 +56,6 @@ func lookupDir() (string, error) {
 	}
 
 	top = top + "/src/"
-	log.Print("top is ", top)
-	log.Print("dot is ", dot)
 	if strings.HasPrefix(dot, top) {
 		return dot[len(top):], nil
 	}
@@ -89,7 +86,6 @@ func rewrite(path string, info os.FileInfo, err error) error {
 }
 
 func rewriteFile(path string) error {
-	log.Print("path ", path)
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
 	if err != nil {
@@ -102,7 +98,6 @@ func rewriteFile(path string) error {
 			return err	// can't happen
 		}
 		if strings.HasPrefix(path, imp) {
-			log.Print("rewriting to ", godir+"/"+path)
 			s.Path.Value = strconv.Quote(godir + "/" + path)
 		}
 	}

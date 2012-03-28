@@ -28,8 +28,10 @@ $ go install github.com/kr/goven
 ## Bugs
 
 - only works with git
+- always clones the default branch (usually master)
+- needs better error checking and argument handling
 - reformats go source code according to package go/printer
-- always clones the master branch
+- does not attempt to handle updating an already-vendored package
 
 If you use this tool, I suggest doing it on a clean checkout.
 Then inspect the output carefully. Caveat lector.

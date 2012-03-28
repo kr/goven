@@ -92,6 +92,7 @@ func rewriteFile(path string) error {
 		return err
 	}
 
+	var changed bool
 	for _, s := range f.Imports {
 		path, err := strconv.Unquote(s.Path.Value)
 		if err != nil {
@@ -99,7 +100,12 @@ func rewriteFile(path string) error {
 		}
 		if strings.HasPrefix(path, imp) {
 			s.Path.Value = strconv.Quote(godir + "/" + path)
+			changed = true
 		}
+	}
+
+	if !changed {
+		return nil
 	}
 
 	wpath := path + ".temp"

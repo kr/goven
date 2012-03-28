@@ -10,6 +10,13 @@ Example usage:
 $ goven github.com/kr/pretty
 ```
 
+## Install
+
+```bash
+$ go get github.com/kr/goven
+$ go install github.com/kr/goven
+```
+
 ## Bugs
 
 - only works with git

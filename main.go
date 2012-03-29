@@ -74,8 +74,8 @@ func main() {
 }
 
 func lookupDir() (string, error) {
-	top := os.Getenv("GOPATH")
-	if top == "" {
+	gopath := os.Getenv("GOPATH")
+	if gopath == "" {
 		return "", errors.New("missing GOPATH")
 	}
 
@@ -84,9 +84,12 @@ func lookupDir() (string, error) {
 		return "", err
 	}
 
-	top = top + "/src/"
-	if strings.HasPrefix(dot, top) {
-		return dot[len(top):], nil
+	items := strings.Split(gopath, ":")
+	for _, top := range items {
+		top = top + "/src/"
+		if strings.HasPrefix(dot, top) {
+			return dot[len(top):], nil
+		}
 	}
 
 	return "", errors.New("cwd not found in GOPATH")

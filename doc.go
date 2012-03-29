@@ -3,7 +3,7 @@
 // import paths as necessary.
 //
 // Example usage:
-//   goven github.com/kr/pretty
+//   goven github.com/bmizerany/pat
 //
 // It takes the named package, clones its code into
 // a subdirectory, removes the VCS metadata, and

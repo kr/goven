@@ -2,6 +2,8 @@ package main
 
 import (
 	"errors"
+	"flag"
+	"fmt"
 	"go/parser"
 	"go/printer"
 	"go/token"
@@ -15,42 +17,59 @@ import (
 
 var godir, imp string
 
+var (
+	fetch   = flag.Bool("fetch", true, "fetch the code")
+	rewrite = flag.Bool("rewrite", true, "rewrite include paths")
+)
+
+func usage() {
+	fmt.Fprintf(os.Stderr, "Usage: %s [FLAGS] <package>\n", os.Args[0])
+	flag.PrintDefaults()
+}
+
 func main() {
 	var err error
 
-	if len(os.Args) < 2 {
-		log.Fatalf("Usage: %s package", os.Args[0])
+	flag.Usage = usage
+	flag.Parse()
+	if flag.NArg() != 1 {
+		flag.Usage()
+		os.Exit(1)
 	}
-	imp = os.Args[1]
+	imp = flag.Arg(0)
 
 	godir, err = lookupDir()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = os.RemoveAll(imp)
-	if err != nil {
-		log.Fatal(err)
+	if *fetch {
+		err = os.RemoveAll(imp)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = run("git", "clone", "git://"+imp+".git", imp)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = os.RemoveAll(imp + "/.git")
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
-	err = run("git", "clone", "git://"+imp+".git", imp)
-	if err != nil {
-		log.Fatal(err)
-	}
+	if *rewrite {
+		err = filepath.Walk(".", mangle)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	err = os.RemoveAll(imp + "/.git")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = filepath.Walk(".", rewrite)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = run("go", "fmt")
-	if err != nil {
-		log.Fatal(err)
+		err = run("go", "fmt")
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
@@ -81,13 +100,13 @@ func run(name string, args ...string) error {
 	return cmd.Run()
 }
 
-func rewrite(path string, info os.FileInfo, err error) error {
+func mangle(path string, info os.FileInfo, err error) error {
 	if err != nil {
 		log.Print(err)
 	}
 
 	if !info.IsDir() && strings.HasSuffix(path, ".go") {
-		err = rewriteFile(path)
+		err = mangleFile(path)
 		if err != nil {
 			log.Print(err)
 		}
@@ -95,7 +114,7 @@ func rewrite(path string, info os.FileInfo, err error) error {
 	return nil
 }
 
-func rewriteFile(path string) error {
+func mangleFile(path string) error {
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
 	if err != nil {

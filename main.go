@@ -15,10 +15,10 @@ import (
 	"strings"
 )
 
-var godir, imp string
+var curgodir, imp string
 
 var (
-	fetch   = flag.Bool("fetch", true, "fetch the code")
+	copy    = flag.Bool("copy", true, "copy the code")
 	rewrite = flag.Bool("rewrite", true, "rewrite include paths")
 )
 
@@ -38,18 +38,28 @@ func main() {
 	}
 	imp = flag.Arg(0)
 
-	godir, err = lookupDir()
+	pkgdir := which(imp)
+	if pkgdir == "" {
+		log.Fatal("could not find package")
+	}
+
+	curgodir, err = lookupDir()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if *fetch {
+	if *copy {
 		err = os.RemoveAll(imp)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		err = run("git", "clone", "git://"+imp+".git", imp)
+		err = os.MkdirAll(imp, 0770)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = run("cp", "-r", pkgdir, imp)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -71,6 +81,21 @@ func main() {
 			log.Fatal(err)
 		}
 	}
+}
+
+func which(pkg string) string {
+	for _, top := range strings.Split(os.Getenv("GOPATH"), ":") {
+		dir := top + "/src/" + pkg
+		_, err := os.Stat(dir)
+		if err == nil {
+			return dir
+		}
+		p := err.(*os.PathError)
+		if !os.IsNotExist(p.Err) {
+			log.Print(err)
+		}
+	}
+	return ""
 }
 
 func lookupDir() (string, error) {
@@ -131,7 +156,7 @@ func mangleFile(path string) error {
 			return err // can't happen
 		}
 		if strings.HasPrefix(path, imp) {
-			s.Path.Value = strconv.Quote(godir + "/" + path)
+			s.Path.Value = strconv.Quote(curgodir + "/" + path)
 			changed = true
 		}
 	}

@@ -3,12 +3,14 @@
 // import paths as necessary.
 //
 // Example usage:
+//   go get github.com/bmizerany/pat
 //   goven github.com/bmizerany/pat
 //
-// It takes the named package, clones its code into
-// a subdirectory, removes the VCS metadata, and
-// rewrites import paths in the current directory tree
-// to refer to the new location. For example, vendoring
-// github.com/kr/pretty into example.com/foo would
-// produce an import path of example.com/foo/github.com/kr/pretty.
+// It takes the named package, copies its files from the
+// usual place in GOPATH into the current directory,
+// removes the VCS metadata, and rewrites import paths
+// in the current directory tree to refer to the new location.
+// For example, vendoring github.com/bmizerany/pat into
+// example.com/foo would produce an import path of
+// example.com/foo/github.com/bmizerany/pat.
 package main

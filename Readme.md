@@ -23,7 +23,6 @@ produce an import path of
 
 ```bash
 $ go get github.com/kr/goven
-$ go install github.com/kr/goven
 ```
 
 ## Bugs

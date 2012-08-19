@@ -68,7 +68,7 @@ func main() {
 		for _, scmdir := range scmdirs {
 			err = os.RemoveAll(imp + scmdir)
 			if err != nil {
-				log.Println(err)
+				log.Fatal(err)
 			}
 		}
 	}

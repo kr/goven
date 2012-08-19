@@ -59,14 +59,17 @@ func main() {
 			log.Fatal(err)
 		}
 
-		err = run("cp", "-r", pkgdir, imp)
+		err = run("cp", "-r", pkgdir+"/", imp)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		err = os.RemoveAll(imp + "/.git")
-		if err != nil {
-			log.Fatal(err)
+		scmdirs := []string{"/.git", "/.hg", "/.bzr"}
+		for _, scmdir := range scmdirs {
+			err = os.RemoveAll(imp + scmdir)
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 	}
 

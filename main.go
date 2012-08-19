@@ -68,6 +68,14 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		scmdirs := []string{"/.git", "/.hg", "/.bzr"}
+		for _, scmdir := range scmdirs {
+			err = os.RemoveAll(imp + scmdir)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
 	}
 
 	if *rewrite {

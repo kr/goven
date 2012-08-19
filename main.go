@@ -64,16 +64,11 @@ func main() {
 			log.Fatal(err)
 		}
 
-		err = os.RemoveAll(imp + "/.git")
-		if err != nil {
-			log.Fatal(err)
-		}
-
 		scmdirs := []string{"/.git", "/.hg", "/.bzr"}
 		for _, scmdir := range scmdirs {
 			err = os.RemoveAll(imp + scmdir)
 			if err != nil {
-				log.Fatal(err)
+				log.Println(err)
 			}
 		}
 	}

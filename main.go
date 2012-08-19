@@ -59,7 +59,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		err = run("cp", "-r", pkgdir, imp)
+		err = run("cp", "-r", pkgdir+"/", imp)
 		if err != nil {
 			log.Fatal(err)
 		}

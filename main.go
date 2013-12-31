@@ -79,12 +79,14 @@ func main() {
 		if err = os.MkdirAll(destDir, 0770); err != nil {
 			log.Fatal(err)
 		}
+		// TODO(maruel): Copy manually so dot directories are not copied in the
+		// first place.
 		if err = run("cp", "-r", impDir+"/.", destDir); err != nil {
 			log.Fatal(err)
 		}
 
-		for _, scmdir := range []string{"/.git", "/.hg", "/.bzr"} {
-			if err = os.RemoveAll(impName + scmdir); err != nil {
+		for _, scmdir := range []string{".git", ".hg", ".bzr"} {
+			if err = os.RemoveAll(filepath.Join(destDir, scmdir)); err != nil {
 				log.Fatal(err)
 			}
 		}

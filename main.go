@@ -17,10 +17,10 @@ import (
 )
 
 var (
-	copy       = flag.Bool("copy", true, "copy the code")
-	rewrite    = flag.Bool("rewrite", true, "rewrite include paths")
-	verbose    = flag.Bool("verbose", false, "notes what is being done")
-	prefixPath = flag.String("prefix", "", "subdirectory to put files in, e.g. 'third_party'")
+	copyFlag       = flag.Bool("copy", true, "copy the code")
+	rewriteFlag    = flag.Bool("rewrite", true, "rewrite include paths")
+	verboseFlag    = flag.Bool("verbose", false, "notes what is being done")
+	prefixPathFlag = flag.String("prefix", "", "subdirectory to put files in, e.g. 'third_party'")
 )
 
 func usage() {
@@ -29,7 +29,7 @@ func usage() {
 }
 
 func logf(format string, v ...interface{}) {
-	if *verbose {
+	if *verboseFlag {
 		fmt.Printf(format+"\n", v...)
 	}
 }
@@ -65,45 +65,54 @@ func main() {
 	}
 
 	destDir := impName
-	if *prefixPath != "" {
-		destDir = filepath.Join(*prefixPath, destDir)
-		relativeName = relativeName + "/" + *prefixPath
+	if *prefixPathFlag != "" {
+		destDir = filepath.Join(*prefixPathFlag, destDir)
+		relativeName = relativeName + "/" + *prefixPathFlag
 	}
 	logf("Using relative path: %s", destDir)
 
-	if *copy {
-		logf("Copying %s into %s", impDir, destDir)
-		if err = os.RemoveAll(destDir); err != nil {
-			log.Fatal(err)
-		}
-		if err = os.MkdirAll(destDir, 0770); err != nil {
-			log.Fatal(err)
-		}
-		// TODO(maruel): Copy manually so dot directories are not copied in the
-		// first place.
-		if err = run("cp", "-r", impDir+"/.", destDir); err != nil {
-			log.Fatal(err)
-		}
-
-		for _, scmdir := range []string{".git", ".hg", ".bzr"} {
-			if err = os.RemoveAll(filepath.Join(destDir, scmdir)); err != nil {
-				log.Fatal(err)
-			}
-		}
-	}
-
-	if *rewrite {
-		logf("Adding prefix %s to %s", relativeName, impName)
-		callback := func(p string, info os.FileInfo, err error) error {
-			return mangle(p, impName, relativeName, info, err)
-		}
-		if err = filepath.Walk(".", callback); err != nil {
-			log.Fatal(err)
-		}
-		if err = run("go", "fmt"); err != nil {
+	if *copyFlag {
+		if err := copyPackage(impDir, destDir); err != nil {
 			log.Fatal(err)
 		}
 	}
+
+	if *rewriteFlag {
+		if err := rewriteImports(impName, relativeName); err != nil {
+			log.Fatal(err)
+		}
+	}
+	log.Println("Success!")
+}
+
+func copyPackage(impDir, destDir string) error {
+	logf("copyPackage(%s, %s)", impDir, destDir)
+	if err := os.RemoveAll(destDir); err != nil {
+		return fmt.Errorf("Failed to delete %s: %s", destDir, err)
+	}
+	if err := os.MkdirAll(destDir, 0770); err != nil {
+		return fmt.Errorf("Failed to create %s: %s", destDir, err)
+	}
+	// TODO(maruel): Copy manually so dot directories are not copied in the
+	// first place.
+	if err := run("cp", "-r", impDir+"/.", destDir); err != nil {
+		return fmt.Errorf("Failed to copy %s to %s: %s", impDir, destDir, err)
+	}
+
+	for _, scmdir := range []string{".git", ".hg", ".bzr"} {
+		if err := os.RemoveAll(filepath.Join(destDir, scmdir)); err != nil {
+			return fmt.Errorf("Failed to remove %s: %s", scmdir, err)
+		}
+	}
+	return nil
+}
+
+func rewriteImports(impName, relativeName string) error {
+	logf("rewriteImports(%s, %s)", relativeName, impName)
+	callback := func(p string, info os.FileInfo, err error) error {
+		return mangle(p, impName, relativeName, info, err)
+	}
+	return filepath.Walk(".", callback)
 }
 
 // Retrieves the directory containing the package to import.
@@ -177,27 +186,26 @@ func mangleFileImports(filePath, impName, relativeName string) error {
 	if err != nil {
 		return fmt.Errorf("Failed to parse %s: %s", filePath, err)
 	}
-	if changed, err := mangleImports(f, impName, relativeName); changed || err != nil {
+	if changed, err := mangleImports(f, impName, relativeName); !changed || err != nil {
+		// Either the file was not changed or an error occurred.
 		return err
 	}
-	wpath := filePath + ".temp"
-	w, err := os.Create(wpath)
+
+	w, err := os.Create(filePath)
 	if err != nil {
-		return fmt.Errorf("Failed to create %s: %s", wpath, err)
-		return err
+		return fmt.Errorf("Failed to create %s: %s", filePath, err)
 	}
 	if err = printer.Fprint(w, fset, f); err != nil {
-		return fmt.Errorf("Failed to write %s: %s", wpath, err)
+		return fmt.Errorf("Failed to write %s: %s", filePath, err)
 	}
 	if err = w.Close(); err != nil {
-		return fmt.Errorf("Failed to close %s: %s", wpath, err)
+		return fmt.Errorf("Failed to close %s: %s", filePath, err)
 	}
-	logf("Modified %s", filePath)
-	return os.Rename(wpath, filePath)
+	return run("gofmt", "-w", filePath)
 }
 
 func mangleImports(f *ast.File, impName, relativeName string) (bool, error) {
-	var changed bool
+	changed := false
 	for _, s := range f.Imports {
 		path, err := strconv.Unquote(s.Path.Value)
 		if err != nil {

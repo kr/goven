@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"go/ast"
 	"go/parser"
 	"go/printer"
 	"go/token"
@@ -15,11 +16,11 @@ import (
 	"strings"
 )
 
-var curgodir, imp string
-
 var (
-	copy    = flag.Bool("copy", true, "copy the code")
-	rewrite = flag.Bool("rewrite", true, "rewrite include paths")
+	copyFlag       = flag.Bool("copy", true, "copy the code")
+	rewriteFlag    = flag.Bool("rewrite", true, "rewrite include paths")
+	verboseFlag    = flag.Bool("verbose", false, "notes what is being done")
+	prefixPathFlag = flag.String("prefix", "", "subdirectory to put files in, e.g. 'third_party'")
 )
 
 func usage() {
@@ -27,103 +28,137 @@ func usage() {
 	flag.PrintDefaults()
 }
 
-func main() {
-	var err error
+func logf(format string, v ...interface{}) {
+	if *verboseFlag {
+		fmt.Printf(format+"\n", v...)
+	}
+}
 
+func main() {
+	log.SetFlags(0)
+	log.SetPrefix("goven: ")
 	flag.Usage = usage
 	flag.Parse()
 	if flag.NArg() != 1 {
 		flag.Usage()
 		os.Exit(1)
 	}
-	imp = flag.Arg(0)
+	// Package to import.
+	impName := flag.Arg(0)
 
-	pkgdir := which(imp)
-	if pkgdir == "" {
-		log.Fatal("could not find package")
+	// Package to import relative to GOPATH.
+	impDir := packageToDir(impName)
+	if impDir == "" {
+		log.Fatalf("Could not find package %s", impName)
 	}
+	logf("Found package path: %s", impDir)
 
-	curgodir, err = lookupDir()
+	// Current directory relative to GOPATH.
+	cwd, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if *copy {
-		err = os.RemoveAll(imp)
-		if err != nil {
-			log.Fatal(err)
-		}
+	relativeName, err := dirToPackage(cwd)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-		err = os.MkdirAll(imp, 0770)
-		if err != nil {
-			log.Fatal(err)
-		}
+	destDir := impName
+	if *prefixPathFlag != "" {
+		destDir = filepath.Join(*prefixPathFlag, destDir)
+		relativeName = relativeName + "/" + *prefixPathFlag
+	}
+	logf("Using relative path: %s", destDir)
 
-		err = run("cp", "-r", pkgdir+"/.", imp)
-		if err != nil {
+	if *copyFlag {
+		if err := copyPackage(impDir, destDir); err != nil {
 			log.Fatal(err)
-		}
-
-		scmdirs := []string{"/.git", "/.hg", "/.bzr"}
-		for _, scmdir := range scmdirs {
-			err = os.RemoveAll(imp + scmdir)
-			if err != nil {
-				log.Fatal(err)
-			}
 		}
 	}
 
-	if *rewrite {
-		err = filepath.Walk(".", mangle)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		err = run("go", "fmt")
-		if err != nil {
+	if *rewriteFlag {
+		if err := rewriteImports(impName, relativeName); err != nil {
 			log.Fatal(err)
 		}
 	}
+	log.Println("Success!")
 }
 
-func which(pkg string) string {
+func copyPackage(impDir, destDir string) error {
+	logf("copyPackage(%s, %s)", impDir, destDir)
+	if err := os.RemoveAll(destDir); err != nil {
+		return fmt.Errorf("Failed to delete %s: %s", destDir, err)
+	}
+	if err := os.MkdirAll(destDir, 0770); err != nil {
+		return fmt.Errorf("Failed to create %s: %s", destDir, err)
+	}
+	// TODO(maruel): Copy manually so dot directories are not copied in the
+	// first place.
+	if err := run("cp", "-r", impDir+"/.", destDir); err != nil {
+		return fmt.Errorf("Failed to copy %s to %s: %s", impDir, destDir, err)
+	}
+
+	for _, scmdir := range []string{".git", ".hg", ".bzr"} {
+		if err := os.RemoveAll(filepath.Join(destDir, scmdir)); err != nil {
+			return fmt.Errorf("Failed to remove %s: %s", scmdir, err)
+		}
+	}
+	return nil
+}
+
+func rewriteImports(impName, relativeName string) error {
+	logf("rewriteImports(%s, %s)", relativeName, impName)
+	callback := func(p string, info os.FileInfo, err error) error {
+		return mangle(p, impName, relativeName, info, err)
+	}
+	return filepath.Walk(".", callback)
+}
+
+// Retrieves the directory containing the package to import.
+func packageToDir(pkg string) string {
 	for _, top := range strings.Split(os.Getenv("GOPATH"), ":") {
 		dir := top + "/src/" + pkg
 		_, err := os.Stat(dir)
 		if err == nil {
 			return dir
 		}
-		p := err.(*os.PathError)
-		if !os.IsNotExist(p.Err) {
+		if p := err.(*os.PathError); !os.IsNotExist(p.Err) {
 			log.Print(err)
 		}
 	}
 	return ""
 }
 
-func lookupDir() (string, error) {
+// Returns the relative import path to this directory.
+func dirToPackage(dir string) (string, error) {
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
 		return "", errors.New("missing GOPATH")
 	}
 
-	dot, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-
 	items := strings.Split(gopath, ":")
 	for _, top := range items {
 		top = top + "/src/"
-		if strings.HasPrefix(dot, top) {
-			return dot[len(top):], nil
+		if strings.HasPrefix(dir, top) {
+			logf("Found GOPATH %s", top)
+			return dir[len(top):], nil
+		}
+		if top, err := filepath.EvalSymlinks(top); err == nil {
+			// EvalSymlinks() removes trailing /.
+			top += "/"
+			if strings.HasPrefix(dir, top) {
+				logf("Found GOPATH %s", top)
+				return dir[len(top):], nil
+			}
 		}
 	}
 
-	return "", errors.New("cwd not found in GOPATH")
+	return "", fmt.Errorf("%s not found in GOPATH\nGOPATH=%s", dir, gopath)
 }
 
 func run(name string, args ...string) error {
+	logf("run(%s, %s)", name, strings.Join(args, ", "))
 	cmd := exec.Command(name, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
@@ -131,58 +166,55 @@ func run(name string, args ...string) error {
 	return cmd.Run()
 }
 
-func mangle(path string, info os.FileInfo, err error) error {
+func mangle(filePath, impName, relativeName string, info os.FileInfo, err error) error {
 	if err != nil {
 		log.Print(err)
 	}
 
-	if !info.IsDir() && strings.HasSuffix(path, ".go") {
-		err = mangleFile(path)
-		if err != nil {
+	if !info.IsDir() && strings.HasSuffix(filePath, ".go") {
+		if err = mangleFileImports(filePath, impName, relativeName); err != nil {
 			log.Print(err)
 		}
 	}
 	return nil
 }
 
-func mangleFile(path string) error {
+// Mangles imports in a file.
+func mangleFileImports(filePath, impName, relativeName string) error {
 	fset := token.NewFileSet()
-	f, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+	f, err := parser.ParseFile(fset, filePath, nil, parser.ParseComments)
 	if err != nil {
+		return fmt.Errorf("Failed to parse %s: %s", filePath, err)
+	}
+	if changed, err := mangleImports(f, impName, relativeName); !changed || err != nil {
+		// Either the file was not changed or an error occurred.
 		return err
 	}
 
-	var changed bool
+	w, err := os.Create(filePath)
+	if err != nil {
+		return fmt.Errorf("Failed to create %s: %s", filePath, err)
+	}
+	if err = printer.Fprint(w, fset, f); err != nil {
+		return fmt.Errorf("Failed to write %s: %s", filePath, err)
+	}
+	if err = w.Close(); err != nil {
+		return fmt.Errorf("Failed to close %s: %s", filePath, err)
+	}
+	return run("gofmt", "-w", filePath)
+}
+
+func mangleImports(f *ast.File, impName, relativeName string) (bool, error) {
+	changed := false
 	for _, s := range f.Imports {
 		path, err := strconv.Unquote(s.Path.Value)
 		if err != nil {
-			return err // can't happen
+			return false, err
 		}
-		if strings.HasPrefix(path, imp) {
-			s.Path.Value = strconv.Quote(curgodir + "/" + path)
+		if strings.HasPrefix(path, impName) {
+			s.Path.Value = strconv.Quote(relativeName + "/" + path)
 			changed = true
 		}
 	}
-
-	if !changed {
-		return nil
-	}
-
-	wpath := path + ".temp"
-	w, err := os.Create(wpath)
-	if err != nil {
-		return err
-	}
-
-	err = printer.Fprint(w, fset, f)
-	if err != nil {
-		return err
-	}
-
-	err = w.Close()
-	if err != nil {
-		return err
-	}
-
-	return os.Rename(wpath, path)
+	return changed, nil
 }

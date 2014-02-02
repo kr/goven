@@ -18,6 +18,7 @@ import (
 var curgodir, imp string
 
 var (
+	prefix  = flag.String("prefix", "", "prefix directory for third party dependencies")
 	copy    = flag.Bool("copy", true, "copy the code")
 	rewrite = flag.Bool("rewrite", true, "rewrite include paths")
 )
@@ -43,30 +44,35 @@ func main() {
 		log.Fatal("could not find package")
 	}
 
+	if *prefix != "" && !strings.HasSuffix(*prefix, "/") {
+		*prefix = *prefix+"/"
+	}
+
 	curgodir, err = lookupDir()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	if *copy {
-		err = os.RemoveAll(imp)
+		impDir := *prefix+imp
+		err = os.RemoveAll(impDir)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		err = os.MkdirAll(imp, 0770)
+		err = os.MkdirAll(impDir, 0770)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		err = run("cp", "-r", pkgdir+"/.", imp)
+		err = run("cp", "-r", pkgdir+"/.", impDir)
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		scmdirs := []string{"/.git", "/.hg", "/.bzr"}
 		for _, scmdir := range scmdirs {
-			err = os.RemoveAll(imp + scmdir)
+			err = os.RemoveAll(impDir + scmdir)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -159,7 +165,7 @@ func mangleFile(path string) error {
 			return err // can't happen
 		}
 		if strings.HasPrefix(path, imp) {
-			s.Path.Value = strconv.Quote(curgodir + "/" + path)
+			s.Path.Value = strconv.Quote(curgodir + "/" + *prefix + path)
 			changed = true
 		}
 	}

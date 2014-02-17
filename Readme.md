@@ -25,9 +25,5 @@ produce an import path of
 $ go get github.com/kr/goven
 ```
 
-## Bugs
-
-- probably doesn't work on Windows
-
 If you use this tool, I suggest doing it on a clean checkout.
 Then inspect the output carefully. Caveat lector.

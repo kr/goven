@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 )
@@ -49,24 +50,30 @@ func main() {
 	}
 
 	if *copy {
-		err = os.RemoveAll(imp)
+		impdir := filepath.Clean(imp)
+
+		err = os.RemoveAll(impdir)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		err = os.MkdirAll(imp, 0770)
+		err = os.MkdirAll(impdir, 0770)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		err = run("cp", "-r", pkgdir+"/.", imp)
+		if runtime.GOOS == "windows" {
+			err = run("xcopy", "/D", "/E", "/C", "/R", "/I", "/K", "/Y", "/F", "/Q", filepath.Clean(pkgdir)+".", impdir)
+		} else {
+			err = run("cp", "-r", pkgdir+"/.", impdir)
+		}
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		scmdirs := []string{"/.git", "/.hg", "/.bzr"}
+		scmdirs := []string{".git", ".hg", ".bzr"}
 		for _, scmdir := range scmdirs {
-			err = os.RemoveAll(imp + scmdir)
+			err = os.RemoveAll(filepath.Join(impdir, scmdir))
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -87,8 +94,8 @@ func main() {
 }
 
 func which(pkg string) string {
-	for _, top := range strings.Split(os.Getenv("GOPATH"), ":") {
-		dir := top + "/src/" + pkg
+	for _, top := range strings.Split(os.Getenv("GOPATH"), string(filepath.ListSeparator)) {
+		dir := filepath.Join(top, "src", pkg)
 		_, err := os.Stat(dir)
 		if err == nil {
 			return dir
@@ -111,10 +118,11 @@ func lookupDir() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	dot = filepath.ToSlash(dot)
 
-	items := strings.Split(gopath, ":")
+	items := strings.Split(gopath, string(filepath.ListSeparator))
 	for _, top := range items {
-		top = top + "/src/"
+		top = filepath.ToSlash(filepath.Join(top, "src"))
 		if strings.HasPrefix(dot, top) {
 			return dot[len(top):], nil
 		}
@@ -126,7 +134,7 @@ func lookupDir() (string, error) {
 func run(name string, args ...string) error {
 	cmd := exec.Command(name, args...)
 	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
+	cmd.Stdout = nil
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
@@ -158,8 +166,8 @@ func mangleFile(path string) error {
 		if err != nil {
 			return err // can't happen
 		}
-		if strings.HasPrefix(path, imp) {
-			s.Path.Value = strconv.Quote(curgodir + "/" + path)
+		if strings.HasPrefix(filepath.ToSlash(path), imp) {
+			s.Path.Value = strconv.Quote(filepath.Join(curgodir, path))
 			changed = true
 		}
 	}
@@ -183,6 +191,8 @@ func mangleFile(path string) error {
 	if err != nil {
 		return err
 	}
+
+	os.Remove(path)
 
 	return os.Rename(wpath, path)
 }

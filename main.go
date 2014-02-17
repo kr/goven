@@ -94,7 +94,7 @@ func main() {
 }
 
 func which(pkg string) string {
-	for _, top := range strings.Split(os.Getenv("GOPATH"), ":") {
+	for _, top := range strings.Split(os.Getenv("GOPATH"), string(filepath.ListSeparator)) {
 		dir := filepath.Join(top, "src", pkg)
 		_, err := os.Stat(dir)
 		if err == nil {

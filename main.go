@@ -98,7 +98,7 @@ func which(pkg string) string {
 		dir := filepath.Join(top, "src", pkg)
 		_, err := os.Stat(dir)
 		if err == nil {
-			return filepath.Clean(dir)
+			return dir
 		}
 		p := err.(*os.PathError)
 		if !os.IsNotExist(p.Err) {

@@ -134,7 +134,7 @@ func lookupDir() (string, error) {
 func run(name string, args ...string) error {
 	cmd := exec.Command(name, args...)
 	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
+	cmd.Stdout = nil
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }

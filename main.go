@@ -114,7 +114,7 @@ func lookupDir() (string, error) {
 
 	items := strings.Split(gopath, ":")
 	for _, top := range items {
-		top = top + "/src/"
+		top = strings.TrimSuffix(top, "/") + "/src/"
 		if strings.HasPrefix(dot, top) {
 			return dot[len(top):], nil
 		}

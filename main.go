@@ -88,7 +88,7 @@ func main() {
 
 func which(pkg string) string {
 	for _, top := range strings.Split(os.Getenv("GOPATH"), ":") {
-		dir := top + "/src/" + pkg
+		dir := filepath.Join(top, "src", pkg)
 		_, err := os.Stat(dir)
 		if err == nil {
 			return dir
@@ -114,7 +114,7 @@ func lookupDir() (string, error) {
 
 	items := strings.Split(gopath, ":")
 	for _, top := range items {
-		top = top + "/src/"
+		top = filepath.Join(top, "src/")
 		if strings.HasPrefix(dot, top) {
 			return dot[len(top):], nil
 		}
@@ -159,7 +159,7 @@ func mangleFile(path string) error {
 			return err // can't happen
 		}
 		if strings.HasPrefix(path, imp) {
-			s.Path.Value = strconv.Quote(curgodir + "/" + path)
+			s.Path.Value = strconv.Quote(filepath.Join(curgodir, path))
 			changed = true
 		}
 	}

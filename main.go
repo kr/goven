@@ -120,7 +120,7 @@ func lookupDir() (string, error) {
 		}
 	}
 
-	return "", errors.New("cwd not found in GOPATH")
+	return "", fmt.Errorf("cwd '%s' not found in GOPATH '%s'", dot, gopath)
 }
 
 func run(name string, args ...string) error {
@@ -160,6 +160,7 @@ func mangleFile(path string) error {
 		}
 		if strings.HasPrefix(path, imp) {
 			s.Path.Value = strconv.Quote(filepath.Join(curgodir, path))
+			log.Printf("rewrote ImportPath to '%s'\n", s.Path.Value)
 			changed = true
 		}
 	}

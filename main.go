@@ -20,6 +20,7 @@ var curgodir, imp string
 var (
 	copy    = flag.Bool("copy", true, "copy the code")
 	rewrite = flag.Bool("rewrite", true, "rewrite include paths")
+	debug   = flag.Bool("debug", false, "turn on debug")
 )
 
 func usage() {
@@ -46,6 +47,9 @@ func main() {
 	curgodir, err = lookupDir()
 	if err != nil {
 		log.Fatal(err)
+	}
+	if *debug {
+		log.Printf("using cwd '%s'\n", curgodir)
 	}
 
 	if *copy {
@@ -117,6 +121,9 @@ func lookupDir() (string, error) {
 		top = filepath.Join(top, "src/")
 		if strings.HasPrefix(dot, top) {
 			return dot[len(top):], nil
+		}
+		if *debug {
+			log.Printf("cwd '%s' not found in GOPATH '%s'", dot, top)
 		}
 	}
 

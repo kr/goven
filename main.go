@@ -120,7 +120,11 @@ func lookupDir() (string, error) {
 	for _, top := range items {
 		top = filepath.Join(top, "src/")
 		if strings.HasPrefix(dot, top) {
-			return dot[len(top):], nil
+			cwd := dot[len(top):]
+			if strings.HasPrefix(cwd, "/") {
+				cwd = cwd[1:]
+			}
+			return cwd, nil
 		}
 		if *debug {
 			log.Printf("cwd '%s' not found in GOPATH '%s'", dot, top)

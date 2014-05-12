@@ -20,6 +20,7 @@ var curgodir, imp string
 var (
 	copy    = flag.Bool("copy", true, "copy the code")
 	rewrite = flag.Bool("rewrite", true, "rewrite include paths")
+	debug   = flag.Bool("debug", false, "turn on debug")
 )
 
 func usage() {
@@ -46,6 +47,9 @@ func main() {
 	curgodir, err = lookupDir()
 	if err != nil {
 		log.Fatal(err)
+	}
+	if *debug {
+		log.Printf("using cwd '%s'\n", curgodir)
 	}
 
 	if *copy {
@@ -116,11 +120,18 @@ func lookupDir() (string, error) {
 	for _, top := range items {
 		top = filepath.Join(top, "src/")
 		if strings.HasPrefix(dot, top) {
-			return dot[len(top):], nil
+			cwd := dot[len(top):]
+			if cwd[0] == "/" {
+				cwd = cwd[1:]
+			}
+			return cwd, nil
+		}
+		if *debug {
+			log.Printf("cwd '%s' not found in GOPATH '%s'", dot, top)
 		}
 	}
 
-	return "", errors.New("cwd not found in GOPATH")
+	return "", fmt.Errorf("cwd '%s' not found in GOPATH '%s'", dot, gopath)
 }
 
 func run(name string, args ...string) error {
@@ -160,6 +171,7 @@ func mangleFile(path string) error {
 		}
 		if strings.HasPrefix(path, imp) {
 			s.Path.Value = strconv.Quote(filepath.Join(curgodir, path))
+			log.Printf("rewrote ImportPath to '%s'\n", s.Path.Value)
 			changed = true
 		}
 	}

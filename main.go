@@ -121,7 +121,7 @@ func lookupDir() (string, error) {
 		top = filepath.Join(top, "src/")
 		if strings.HasPrefix(dot, top) {
 			cwd := dot[len(top):]
-			if strings.HasPrefix(cwd, "/") {
+			if cwd[0] == "/" {
 				cwd = cwd[1:]
 			}
 			return cwd, nil

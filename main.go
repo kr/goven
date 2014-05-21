@@ -20,6 +20,8 @@ var curgodir, imp string
 var (
 	copy    = flag.Bool("copy", true, "copy the code")
 	rewrite = flag.Bool("rewrite", true, "rewrite include paths")
+	pathListSeparator = string(os.PathListSeparator)
+	pathSeparator = string(os.PathSeparator)
 )
 
 func usage() {
@@ -64,7 +66,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		scmdirs := []string{"/.git", "/.hg", "/.bzr"}
+		scmdirs := []string{pathListSeparator+".git", pathListSeparator+".hg", pathListSeparator+".bzr"}
 		for _, scmdir := range scmdirs {
 			err = os.RemoveAll(imp + scmdir)
 			if err != nil {
@@ -87,7 +89,7 @@ func main() {
 }
 
 func which(pkg string) string {
-	for _, top := range strings.Split(os.Getenv("GOPATH"), ":") {
+	for _, top := range strings.Split(os.Getenv("GOPATH"), pathSeparator) {
 		dir := top + "/src/" + pkg
 		_, err := os.Stat(dir)
 		if err == nil {
@@ -112,9 +114,9 @@ func lookupDir() (string, error) {
 		return "", err
 	}
 
-	items := strings.Split(gopath, ":")
+	items := strings.Split(gopath, pathSeparator)
 	for _, top := range items {
-		top = top + "/src/"
+		top = top + pathListSeparator + "src" + pathListSeparator
 		if strings.HasPrefix(dot, top) {
 			return dot[len(top):], nil
 		}

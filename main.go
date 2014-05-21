@@ -66,7 +66,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		scmdirs := []string{pathListSeparator+".git", pathListSeparator+".hg", pathListSeparator+".bzr"}
+		scmdirs := []string{pathSeparator+".git", pathSeparator+".hg", pathSeparator+".bzr"}
 		for _, scmdir := range scmdirs {
 			err = os.RemoveAll(imp + scmdir)
 			if err != nil {
@@ -89,7 +89,7 @@ func main() {
 }
 
 func which(pkg string) string {
-	for _, top := range strings.Split(os.Getenv("GOPATH"), pathSeparator) {
+	for _, top := range strings.Split(os.Getenv("GOPATH"), pathListSeparator) {
 		dir := top + "/src/" + pkg
 		_, err := os.Stat(dir)
 		if err == nil {
@@ -114,9 +114,9 @@ func lookupDir() (string, error) {
 		return "", err
 	}
 
-	items := strings.Split(gopath, pathSeparator)
+	items := strings.Split(gopath, pathListSeparator)
 	for _, top := range items {
-		top = top + pathListSeparator + "src" + pathListSeparator
+		top = top + pathSeparator + "src" + pathSeparator
 		if strings.HasPrefix(dot, top) {
 			return dot[len(top):], nil
 		}

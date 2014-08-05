@@ -1,33 +1,9 @@
-# goven
+# Use [godep](https://github.com/tools/godep).
 
-This tool will take source code of a go package
-and copy it into the current directory, adjusting
-import paths as necessary.
+Goven is deprecated. Please use godep instead. Godep is better
+in almost every way. It is better maintained, more popular,
+less error-prone, and more convenient to use.
 
-Example usage:
+https://github.com/tools/godep
 
-```bash
-$ go get github.com/bmizerany/pat
-$ goven github.com/bmizerany/pat
-```
-
-This takes the named package, copies its code into
-a subdirectory, removes the VCS metadata, and
-rewrites import paths in the current directory tree
-to refer to the new location. For example, vendoring
-`github.com/bmizerany/pat` in `example.com/foo` would
-produce an import path of
-`example.com/foo/github.com/bmizerany/pat`.
-
-## Install
-
-```bash
-$ go get github.com/kr/goven
-```
-
-## Bugs
-
-- probably doesn't work on Windows
-
-If you use this tool, I suggest doing it on a clean checkout.
-Then inspect the output carefully. Caveat lector.
+The command `godep save -r` is similar to what goven does.
